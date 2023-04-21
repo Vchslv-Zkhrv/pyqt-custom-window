@@ -135,10 +135,8 @@ class Window(QtWidgets.QMainWindow):
             SideGrip(self, QtCore.Qt.Edge.BottomEdge),
         ]
         self.corner_grips = [QtWidgets.QSizeGrip(self) for i in range(4)]
-
-        self.setAttribute(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground)
-        self.centralWidget().setStyleSheet("background-color: red")
-        self.centralWidget().move(self.pos())
+        for grip in self.corner_grips:
+            grip.setStyleSheet("background-color: rgba(0,0,0,0)")
 
     def setStyleSheet(self, styleSheet: str) -> None:
         self.centralWidget().setStyleSheet(styleSheet)
