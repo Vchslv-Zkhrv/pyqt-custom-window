@@ -1,1 +1,1 @@
-"# pyqt-custom-window" 
+# pyqt-custom-window
