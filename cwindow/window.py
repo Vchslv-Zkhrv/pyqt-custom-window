@@ -3,6 +3,7 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 from .grips import SideGrip
 from .shadow import WindowShadow, WindowEdgeShadow
 
+
 class TitleBar(QtWidgets.QFrame):
 
     """
@@ -108,6 +109,7 @@ class Window(QtWidgets.QMainWindow):
         QtWidgets.QMainWindow.__init__(self)
 
         self.setWindowFlags(QtCore.Qt.WindowType.FramelessWindowHint)
+
         self.setCentralWidget(QtWidgets.QWidget())
         layout = QtWidgets.QVBoxLayout(self.centralWidget())
         layout.setContentsMargins(0, 0, 0, 0)
@@ -133,6 +135,10 @@ class Window(QtWidgets.QMainWindow):
             SideGrip(self, QtCore.Qt.Edge.BottomEdge),
         ]
         self.corner_grips = [QtWidgets.QSizeGrip(self) for i in range(4)]
+
+        self.setAttribute(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.centralWidget().setStyleSheet("background-color: red")
+        self.centralWidget().move(self.pos())
 
     def setStyleSheet(self, styleSheet: str) -> None:
         self.centralWidget().setStyleSheet(styleSheet)
@@ -197,6 +203,21 @@ class Window(QtWidgets.QMainWindow):
             in_rect.width(),
             self.grip_size)
 
+    def _update_cw_geometry(self):
+        rect = self.geometry()
+        rect.setX(0)
+        rect.setY(0)
+        self.centralWidget().setGeometry(rect)
+
     def resizeEvent(self, event):
         QtWidgets.QMainWindow.resizeEvent(self, event)
         self.update_grips()
+        self._update_cw_geometry()
+
+    def paintEvent(self, a0: QtGui.QPaintEvent) -> None:
+        super().paintEvent(a0)
+        self._update_cw_geometry()
+
+    def moveEvent(self, a0: QtGui.QMoveEvent) -> None:
+        super().moveEvent(a0)
+        self._update_cw_geometry()
