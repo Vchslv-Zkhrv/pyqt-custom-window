@@ -140,6 +140,8 @@ class TitleBar(QtWidgets.QFrame):
         self._press_pos = None
         self._shadow = WindowShadow()
         self._parser = EventRectParser(parent)
+        self.window_normal_size = parent.size()
+        self._is_gestured = False
 
     def mousePressEvent(self, a0: QtGui.QMouseEvent) -> None:
         self._is_pressed = True
@@ -162,20 +164,29 @@ class TitleBar(QtWidgets.QFrame):
                 self._shadow.hide()
         return super().mouseMoveEvent(a0)
 
+    def _move_via_gesture(self, a0: QtGui.QMouseEvent):
+        if self._shadow.isVisible():
+            if not self._is_gestured:
+                self.window_normal_size = self.window().size()
+            self._shadow.hide()
+            self._is_gestured = True
+            self.window().setGeometry(self._shadow.geometry())
+        else:
+            if self._is_gestured:
+                self.window().resize(self.window_normal_size)
+            self._parser.parse_event(a0)
+            pos1 = self._parser.point
+            pos0 = self._press_pos
+            dx = pos1.x() - pos0.x()
+            dy = pos1.y() - pos0.y()
+            opos = self.window().pos()
+            self.window().move(dx + opos.x(), dy + opos.y())
+            self._is_gestured = False
+
     def mouseReleaseEvent(self, a0: QtGui.QMouseEvent) -> None:
         self.window().setCursor(QtCore.Qt.CursorShape.ArrowCursor)
         if self._is_pressed:
-            if self._shadow.isVisible():
-                self._shadow.hide()
-                self.window().setGeometry(self._shadow.geometry())
-            else:
-                self._parser.parse_event(a0)
-                pos1 = self._parser.point
-                pos0 = self._press_pos
-                dx = pos1.x() - pos0.x()
-                dy = pos1.y() - pos0.y()
-                opos = self.window().pos()
-                self.window().move(dx + opos.x(), dy + opos.y())
+            self._move_via_gesture(a0)
         self._is_pressed = False
         self._start_pos = None
         return super().mouseReleaseEvent(a0)
