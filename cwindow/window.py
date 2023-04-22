@@ -4,7 +4,7 @@ from .grips import SideGrip
 from .shadow import WindowShadow
 
 
-class EventRect(QtWidgets.QWidget):
+class EventRectParser(QtWidgets.QWidget):
 
     """
     gets event and returns rect for WindowShadow
@@ -21,20 +21,33 @@ class EventRect(QtWidgets.QWidget):
     side: QtCore.Qt.Edge | QtCore.Qt.Corner = None
     rect: QtCore.QRect
 
-    def __init__(self, event: QtGui.QMouseEvent):
+    def __init__(self, window: QtWidgets.QMainWindow):
+        self._window = window
         QtWidgets.QWidget.__init__(self)
+
+    def _drop_to_defaults(self):
+        self.top = False
+        self.left = False
+        self.bottom = False
+        self.right = False
+        self.point = None
+        self.side = None
+        self.rect = None
+
+    def parse_event(self, event: QtGui.QMouseEvent):
+        self._drop_to_defaults()
         self.event = event
-        self.point = self._get_event_absolute_pos(event)
+        self._get_event_absolute_pos()
         self._get_event_edges(event)
         self._translate_edges_to_qt()
 
-    def _get_event_absolute_pos(self, a0: QtGui.QMouseEvent) -> QtCore.QPoint:
-        pos = a0.pos()
+    def _get_event_absolute_pos(self):
+        pos = self.event.pos()
         x, y = pos.x(), pos.y()
-        opos = self.window().pos()
+        opos = self._window.pos()
         x += opos.x()
         y += opos.y()
-        return QtCore.QPoint(x, y)
+        self.point = QtCore.QPoint(x, y)
 
     def _get_event_edges(self, a0: QtGui.QMouseEvent) -> None:
         pos = self.point
@@ -90,25 +103,31 @@ class TitleBar(QtWidgets.QFrame):
 
         self._is_pressed = False
         self._press_pos = None
-        self._shadow: WindowShadow = None
+        self._shadow = WindowShadow()
+        self._parser = EventRectParser(parent)
 
     def mousePressEvent(self, a0: QtGui.QMouseEvent) -> None:
         self._is_pressed = True
-        self._press_pos = EventRect(a0).point
+        self._parser.parse_event(a0)
+        self._press_pos = self._parser.point
         self.window().setCursor(QtCore.Qt.CursorShape.ClosedHandCursor)
         return super().mousePressEvent(a0)
 
     def _show_shadow(self, side: QtCore.Qt.Edge | QtCore.Qt.Corner):
-        pass
+        print(side)
 
     def mouseMoveEvent(self, a0: QtGui.QMouseEvent) -> None:
+        if self._is_pressed:
+            self._parser.parse_event(a0)
+            if self._parser.side:
+                self._show_shadow(self._parser.side)
         return super().mouseMoveEvent(a0)
 
     def mouseReleaseEvent(self, a0: QtGui.QMouseEvent) -> None:
         self.window().setCursor(QtCore.Qt.CursorShape.ArrowCursor)
         if self._is_pressed:
-            pos1 = EventRect(a0).point
-            print(f"realesed at {pos1.x()} {pos1.y()}")
+            self._parser.parse_event(a0)
+            pos1 = self._parser.point
             pos0 = self._press_pos
             dx = pos1.x() - pos0.x()
             dy = pos1.y() - pos0.y()
