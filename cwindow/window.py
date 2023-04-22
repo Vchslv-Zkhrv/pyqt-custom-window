@@ -7,7 +7,7 @@ from .shadow import WindowShadow
 class EventRectParser(QtWidgets.QWidget):
 
     """
-    gets event and returns rect for WindowShadow
+    gets event and makes rect for WindowShadow
     """
 
     event: QtGui.QMouseEvent
@@ -53,7 +53,7 @@ class EventRectParser(QtWidgets.QWidget):
         pos = self.point
         x, y = pos.x(), pos.y()
         geo = self.screen().geometry()
-        top, left, right, bottom = 10, 10, geo.right()-10, geo.bottom()-10
+        top, left, right, bottom = 5, 5, geo.right()-5, geo.bottom()-5
         if x < left:
             self.left = True
         if x > right:
@@ -80,6 +80,41 @@ class EventRectParser(QtWidgets.QWidget):
             self.side = QtCore.Qt.Edge.TopEdge
         elif self.bottom:
             self.side = QtCore.Qt.Edge.BottomEdge
+
+    def get_shadow_rect(self) -> QtCore.QRect | None:
+
+        print(self.side)
+
+        geo = self.screen().geometry()
+        x2 = w2 = int(geo.width()/2)
+        y2 = h2 = int(geo.height()/2)
+
+        if self.side == QtCore.Qt.Edge.BottomEdge:
+            return None
+
+        if self.side == QtCore.Qt.Edge.LeftEdge:
+            geo.setWidth(w2)
+        if self.side == QtCore.Qt.Edge.RightEdge:
+            geo.setX(x2)
+            geo.setWidth(w2)
+        if self.side == QtCore.Qt.Corner.TopLeftCorner:
+            geo.setWidth(w2)
+            geo.setHeight(h2)
+        if self.side == QtCore.Qt.Corner.TopRightCorner:
+            geo.setX(x2)
+            geo.setWidth(w2)
+            geo.setHeight(h2)
+        if self.side == QtCore.Qt.Corner.BottomLeftCorner:
+            geo.setY(y2)
+            geo.setWidth(w2)
+            geo.setHeight(h2)
+        if self.side == QtCore.Qt.Corner.BottomRightCorner:
+            geo.setX(x2)
+            geo.setY(y2)
+            geo.setWidth(w2)
+            geo.setHeight(h2)
+
+        return geo
 
 
 class TitleBar(QtWidgets.QFrame):
@@ -113,26 +148,34 @@ class TitleBar(QtWidgets.QFrame):
         self.window().setCursor(QtCore.Qt.CursorShape.ClosedHandCursor)
         return super().mousePressEvent(a0)
 
-    def _show_shadow(self, side: QtCore.Qt.Edge | QtCore.Qt.Corner):
-        print(side)
+    def _show_shadow(self):
+        rect = self._parser.get_shadow_rect()
+        if rect:
+            self._shadow.show_(rect)
 
     def mouseMoveEvent(self, a0: QtGui.QMouseEvent) -> None:
         if self._is_pressed:
             self._parser.parse_event(a0)
             if self._parser.side:
-                self._show_shadow(self._parser.side)
+                self._show_shadow()
+            else:
+                self._shadow.hide()
         return super().mouseMoveEvent(a0)
 
     def mouseReleaseEvent(self, a0: QtGui.QMouseEvent) -> None:
         self.window().setCursor(QtCore.Qt.CursorShape.ArrowCursor)
         if self._is_pressed:
-            self._parser.parse_event(a0)
-            pos1 = self._parser.point
-            pos0 = self._press_pos
-            dx = pos1.x() - pos0.x()
-            dy = pos1.y() - pos0.y()
-            opos = self.window().pos()
-            self.window().move(dx + opos.x(), dy + opos.y())
+            if self._shadow.isVisible():
+                self._shadow.hide()
+                self.window().setGeometry(self._shadow.geometry())
+            else:
+                self._parser.parse_event(a0)
+                pos1 = self._parser.point
+                pos0 = self._press_pos
+                dx = pos1.x() - pos0.x()
+                dy = pos1.y() - pos0.y()
+                opos = self.window().pos()
+                self.window().move(dx + opos.x(), dy + opos.y())
         self._is_pressed = False
         self._start_pos = None
         return super().mouseReleaseEvent(a0)
