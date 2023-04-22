@@ -1,18 +1,72 @@
-from dataclasses import dataclass
-
 from PyQt6 import QtCore, QtGui, QtWidgets
 
 from .grips import SideGrip
-from .shadow import WindowShadow, WindowEdgeShadow
+from .shadow import WindowShadow
 
 
-@dataclass
-class Edges():
+class EventRect(QtWidgets.QWidget):
+
+    """
+    gets event and returns rect for WindowShadow
+    """
+
+    event: QtGui.QMouseEvent
+
     top: bool = False
-    right: bool = False
-    bottom: bool = False
     left: bool = False
+    bottom: bool = False
+    right: bool = False
 
+    point: QtCore.QPoint
+    side: QtCore.Qt.Edge | QtCore.Qt.Corner = None
+    rect: QtCore.QRect
+
+    def __init__(self, event: QtGui.QMouseEvent):
+        QtWidgets.QWidget.__init__(self)
+        self.event = event
+        self.point = self._get_event_absolute_pos(event)
+        self._get_event_edges(event)
+        self._translate_edges_to_qt()
+
+    def _get_event_absolute_pos(self, a0: QtGui.QMouseEvent) -> QtCore.QPoint:
+        pos = a0.pos()
+        x, y = pos.x(), pos.y()
+        opos = self.window().pos()
+        x += opos.x()
+        y += opos.y()
+        return QtCore.QPoint(x, y)
+
+    def _get_event_edges(self, a0: QtGui.QMouseEvent) -> None:
+        pos = self.point
+        x, y = pos.x(), pos.y()
+        geo = self.screen().geometry()
+        top, left, right, bottom = 10, 10, geo.right()-10, geo.bottom()-10
+        if x < left:
+            self.left = True
+        if x > right:
+            self.right = True
+        if y < top:
+            self.top = True
+        if y > bottom:
+            self.bottom = True
+
+    def _translate_edges_to_qt(self) -> None:
+        if self.right and self.top:
+            self.side = QtCore.Qt.Corner.TopRightCorner
+        elif self.right and self.bottom:
+            self.side = QtCore.Qt.Corner.BottomRightCorner
+        elif self.left and self.top:
+            self.side = QtCore.Qt.Corner.TopLeftCorner
+        elif self.left and self.bottom:
+            self.side = QtCore.Qt.Corner.BottomLeftCorner
+        elif self.right:
+            self.side = QtCore.Qt.Edge.RightEdge
+        elif self.left:
+            self.side = QtCore.Qt.Edge.LeftEdge
+        elif self.top:
+            self.side = QtCore.Qt.Edge.TopEdge
+        elif self.bottom:
+            self.side = QtCore.Qt.Edge.BottomEdge
 
 
 class TitleBar(QtWidgets.QFrame):
@@ -38,85 +92,22 @@ class TitleBar(QtWidgets.QFrame):
         self._press_pos = None
         self._shadow: WindowShadow = None
 
-    def get_event_absolute_pos(self, a0: QtGui.QMouseEvent) -> QtCore.QPoint:
-        pos = a0.pos()
-        x, y = pos.x(), pos.y()
-        opos = self.window().pos()
-        x += opos.x()
-        y += opos.y()
-        return QtCore.QPoint(x, y)
-
-    def _get_event_edges(self, a0: QtGui.QMouseEvent) -> Edges:
-        edges = Edges()
-        pos = self.get_event_absolute_pos(a0)
-        x, y = pos.x(), pos.y()
-        geo = self.screen().geometry()
-        top, left, right, bottom = 10, 10, geo.right()-10, geo.bottom()-10
-        if x < left:
-            edges.left = True
-        if x > right:
-            edges.right = True
-        if y < top:
-            edges.top = True
-        if y > bottom:
-            edges.bottom = True
-        return edges
-
-    def _translate_edges_to_qt(self, edges: Edges) -> QtCore.Qt.Edge | QtCore.Qt.Corner | None:
-        if edges.right and edges.top:
-            return QtCore.Qt.Corner.TopRightCorner
-        elif edges.right and edges.bottom:
-            return QtCore.Qt.Corner.BottomRightCorner
-        elif edges.left and edges.top:
-            return QtCore.Qt.Corner.TopLeftCorner
-        elif edges.left and edges.bottom:
-            return QtCore.Qt.Corner.BottomLeftCorner
-        elif edges.right:
-            return QtCore.Qt.Edge.RightEdge
-        elif edges.left:
-            return QtCore.Qt.Edge.LeftEdge
-        elif edges.top:
-            return QtCore.Qt.Edge.TopEdge
-        elif edges.bottom:
-            return QtCore.Qt.Edge.BottomEdge
-
     def mousePressEvent(self, a0: QtGui.QMouseEvent) -> None:
         self._is_pressed = True
-        self._press_pos = self.get_event_absolute_pos(a0)
+        self._press_pos = EventRect(a0).point
         self.window().setCursor(QtCore.Qt.CursorShape.ClosedHandCursor)
-        print(f"pressed at {self._press_pos.x()} {self._press_pos.y()}")
         return super().mousePressEvent(a0)
 
     def _show_shadow(self, side: QtCore.Qt.Edge | QtCore.Qt.Corner):
-        print(side)
-        return
-        if side == None and self._shadow:
-            self._shadow.close()
-            self._shadow = None
-            return
-        if side == QtCore.Qt.Edge.BottomEdge and self._shadow:
-            self._shadow.close()
-            self._shadow = None
-            return
-        if side == QtCore.Qt.Edge.BottomEdge and not self._shadow:
-            return
-        if side and not self._shadow:
-            self._shadow = WindowEdgeShadow(self.screen(), QtGui.QColor("black"), side)
-            self._shadow.show()
+        pass
 
     def mouseMoveEvent(self, a0: QtGui.QMouseEvent) -> None:
-        edges = self._get_event_edges(a0)
-        side = self._translate_edges_to_qt(edges)
-        self._show_shadow(side)
         return super().mouseMoveEvent(a0)
 
     def mouseReleaseEvent(self, a0: QtGui.QMouseEvent) -> None:
-        if self._shadow:
-            self._shadow.close()
-            self._shadow = None
         self.window().setCursor(QtCore.Qt.CursorShape.ArrowCursor)
         if self._is_pressed:
-            pos1 = self.get_event_absolute_pos(a0)
+            pos1 = EventRect(a0).point
             print(f"realesed at {pos1.x()} {pos1.y()}")
             pos0 = self._press_pos
             dx = pos1.x() - pos0.x()
