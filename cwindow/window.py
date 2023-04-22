@@ -1,7 +1,18 @@
+from dataclasses import dataclass
+
 from PyQt6 import QtCore, QtGui, QtWidgets
 
 from .grips import SideGrip
 from .shadow import WindowShadow, WindowEdgeShadow
+
+
+@dataclass
+class Edges():
+    top: bool = False
+    right: bool = False
+    bottom: bool = False
+    left: bool = False
+
 
 
 class TitleBar(QtWidgets.QFrame):
@@ -35,21 +46,39 @@ class TitleBar(QtWidgets.QFrame):
         y += opos.y()
         return QtCore.QPoint(x, y)
 
-    def get_event_edge(self, a0: QtGui.QMouseEvent) -> QtCore.Qt.Edge | None:
+    def _get_event_edges(self, a0: QtGui.QMouseEvent) -> Edges:
+        edges = Edges()
         pos = self.get_event_absolute_pos(a0)
         x, y = pos.x(), pos.y()
         geo = self.screen().geometry()
-        top, left, right, bottom = 0, 0, geo.right()-30, geo.bottom()-30
+        top, left, right, bottom = 10, 10, geo.right()-10, geo.bottom()-10
         if x < left:
-            return QtCore.Qt.Edge.LeftEdge
-        elif x > right:
+            edges.left = True
+        if x > right:
+            edges.right = True
+        if y < top:
+            edges.top = True
+        if y > bottom:
+            edges.bottom = True
+        return edges
+
+    def _translate_edges_to_qt(self, edges: Edges) -> QtCore.Qt.Edge | QtCore.Qt.Corner | None:
+        if edges.right and edges.top:
+            return QtCore.Qt.Corner.TopRightCorner
+        elif edges.right and edges.bottom:
+            return QtCore.Qt.Corner.BottomRightCorner
+        elif edges.left and edges.top:
+            return QtCore.Qt.Corner.TopLeftCorner
+        elif edges.left and edges.bottom:
+            return QtCore.Qt.Corner.BottomLeftCorner
+        elif edges.right:
             return QtCore.Qt.Edge.RightEdge
-        elif y < top:
+        elif edges.left:
+            return QtCore.Qt.Edge.LeftEdge
+        elif edges.top:
             return QtCore.Qt.Edge.TopEdge
-        elif y > bottom:
+        elif edges.bottom:
             return QtCore.Qt.Edge.BottomEdge
-        else:
-            return None
 
     def mousePressEvent(self, a0: QtGui.QMouseEvent) -> None:
         self._is_pressed = True
@@ -58,24 +87,27 @@ class TitleBar(QtWidgets.QFrame):
         print(f"pressed at {self._press_pos.x()} {self._press_pos.y()}")
         return super().mousePressEvent(a0)
 
-    def _show_shadow(self, edge: QtCore.Qt.Edge):
-        if edge == None and self._shadow:
+    def _show_shadow(self, side: QtCore.Qt.Edge | QtCore.Qt.Corner):
+        print(side)
+        return
+        if side == None and self._shadow:
             self._shadow.close()
             self._shadow = None
             return
-        if edge == QtCore.Qt.Edge.BottomEdge and self._shadow:
+        if side == QtCore.Qt.Edge.BottomEdge and self._shadow:
             self._shadow.close()
             self._shadow = None
             return
-        if edge == QtCore.Qt.Edge.BottomEdge and not self._shadow:
+        if side == QtCore.Qt.Edge.BottomEdge and not self._shadow:
             return
-        if edge and not self._shadow:
-            self._shadow = WindowEdgeShadow(self.screen(), QtGui.QColor("black"), edge)
+        if side and not self._shadow:
+            self._shadow = WindowEdgeShadow(self.screen(), QtGui.QColor("black"), side)
             self._shadow.show()
 
     def mouseMoveEvent(self, a0: QtGui.QMouseEvent) -> None:
-        edge = self.get_event_edge(a0)
-        self._show_shadow(edge)
+        edges = self._get_event_edges(a0)
+        side = self._translate_edges_to_qt(edges)
+        self._show_shadow(side)
         return super().mouseMoveEvent(a0)
 
     def mouseReleaseEvent(self, a0: QtGui.QMouseEvent) -> None:
@@ -102,12 +134,11 @@ class Window(QtWidgets.QMainWindow):
     Framless window with re-implemented title bar
     """
 
-    _grip_size = 8
+    _grip_size = 12
     _titlebar_height = 44
 
     def __init__(self):
         QtWidgets.QMainWindow.__init__(self)
-
         self.setWindowFlags(QtCore.Qt.WindowType.FramelessWindowHint)
 
         self.setCentralWidget(QtWidgets.QWidget())
@@ -126,8 +157,6 @@ class Window(QtWidgets.QMainWindow):
             )
         layout.addWidget(self.content)
 
-        self.title_bar.setStyleSheet("border: 1px solid rgb(14,14,14);")
-
         self.side_grips = [
             SideGrip(self, QtCore.Qt.Edge.LeftEdge),
             SideGrip(self, QtCore.Qt.Edge.TopEdge),
@@ -140,7 +169,7 @@ class Window(QtWidgets.QMainWindow):
 
     def setStyleSheet(self, styleSheet: str) -> None:
         self.centralWidget().setStyleSheet(styleSheet)
-        return super().setStyleSheet(styleSheet)
+        super().setStyleSheet(styleSheet)
 
     @property
     def grip_size(self):
