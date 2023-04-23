@@ -4,10 +4,10 @@ from .grips import SideGrip
 from .shadow import WindowShadow
 
 
-class EventRectParser(QtWidgets.QWidget):
+class EventParser(QtWidgets.QWidget):
 
     """
-    gets event and makes rect for WindowShadow
+    Parses QMouseEvent
     """
 
     event: QtGui.QMouseEvent
@@ -18,12 +18,15 @@ class EventRectParser(QtWidgets.QWidget):
     right: bool = False
 
     point: QtCore.QPoint
+    relative_pos: tuple[float, float]
     side: QtCore.Qt.Edge | QtCore.Qt.Corner = None
-    rect: QtCore.QRect
+    shadow_rect: QtCore.QRect
 
-    def __init__(self, window: QtWidgets.QMainWindow):
-        self._window = window
+    def __init__(self, window: QtWidgets.QMainWindow, event: QtGui.QMouseEvent):
         QtWidgets.QWidget.__init__(self)
+        self._window = window
+        self.event = event
+        self.parse_event()
 
     def _drop_to_defaults(self):
         self.top = False
@@ -34,12 +37,13 @@ class EventRectParser(QtWidgets.QWidget):
         self.side = None
         self.rect = None
 
-    def parse_event(self, event: QtGui.QMouseEvent):
+    def parse_event(self):
         self._drop_to_defaults()
-        self.event = event
         self._get_event_absolute_pos()
-        self._get_event_edges(event)
+        self._get_event_relative_pos()
+        self._get_event_edges()
         self._translate_edges_to_qt()
+        self._get_shadow_rect()
 
     def _get_event_absolute_pos(self):
         pos = self.event.pos()
@@ -49,7 +53,7 @@ class EventRectParser(QtWidgets.QWidget):
         y += opos.y()
         self.point = QtCore.QPoint(x, y)
 
-    def _get_event_edges(self, a0: QtGui.QMouseEvent) -> None:
+    def _get_event_edges(self):
         pos = self.point
         x, y = pos.x(), pos.y()
         geo = self.screen().geometry()
@@ -63,7 +67,7 @@ class EventRectParser(QtWidgets.QWidget):
         if y > bottom:
             self.bottom = True
 
-    def _translate_edges_to_qt(self) -> None:
+    def _translate_edges_to_qt(self):
         if self.right and self.top:
             self.side = QtCore.Qt.Corner.TopRightCorner
         elif self.right and self.bottom:
@@ -81,16 +85,15 @@ class EventRectParser(QtWidgets.QWidget):
         elif self.bottom:
             self.side = QtCore.Qt.Edge.BottomEdge
 
-    def get_shadow_rect(self) -> QtCore.QRect | None:
-
-        print(self.side)
+    def _get_shadow_rect(self):
 
         geo = self.screen().geometry()
         x2 = w2 = int(geo.width()/2)
         y2 = h2 = int(geo.height()/2)
 
         if self.side == QtCore.Qt.Edge.BottomEdge:
-            return None
+            self.shadow_rect = None
+            return
 
         if self.side == QtCore.Qt.Edge.LeftEdge:
             geo.setWidth(w2)
@@ -114,7 +117,13 @@ class EventRectParser(QtWidgets.QWidget):
             geo.setWidth(w2)
             geo.setHeight(h2)
 
-        return geo
+        self.shadow_rect = geo
+
+    def _get_event_relative_pos(self):
+        dpos = self.event.pos()
+        rx = dpos.x() / self._window.width()
+        ry = dpos.y() / self._window.height()
+        self.relative_pos = (rx, ry)
 
 
 class TitleBar(QtWidgets.QFrame):
@@ -137,58 +146,61 @@ class TitleBar(QtWidgets.QFrame):
             )
 
         self._is_pressed = False
-        self._press_pos = None
-        self._shadow = WindowShadow()
-        self._parser = EventRectParser(parent)
-        self.window_normal_size = parent.size()
         self._is_gestured = False
+        self._shadow = WindowShadow()
+        self.window_normal_size = parent.size()
+
+        self._press_event: EventParser
+        self._realese_event: EventParser
 
     def mousePressEvent(self, a0: QtGui.QMouseEvent) -> None:
         self._is_pressed = True
-        self._parser.parse_event(a0)
-        self._press_pos = self._parser.point
+        self._press_event = EventParser(self.window(), a0)
         self.window().setCursor(QtCore.Qt.CursorShape.ClosedHandCursor)
         return super().mousePressEvent(a0)
 
-    def _show_shadow(self):
-        rect = self._parser.get_shadow_rect()
-        if rect:
-            self._shadow.show_(rect)
-
     def mouseMoveEvent(self, a0: QtGui.QMouseEvent) -> None:
         if self._is_pressed:
-            self._parser.parse_event(a0)
-            if self._parser.side:
-                self._show_shadow()
+            parser = EventParser(self.window(), a0)
+            if parser.side and parser.shadow_rect:
+                self._shadow.show_(parser.shadow_rect)
             else:
                 self._shadow.hide()
         return super().mouseMoveEvent(a0)
 
-    def _move_via_gesture(self, a0: QtGui.QMouseEvent):
+    def _use_shadow_geometry(self):
+        if not self._is_gestured:
+            self.window_normal_size = self.window().size()
+        self._shadow.hide()
+        self._is_gestured = True
+        self.window().setGeometry(self._shadow.geometry())
+
+    def _move_normal(self):
+        pos1 = self._realese_event.point
+        pos0 = self._press_event.point
+        posW = self.window().pos()
+        dx = pos1.x() - pos0.x()
+        dy = pos1.y() - pos0.y()
+        self.window().move(dx + posW.x(), dy + posW.y())
+
+    def _restore_normal_size(self):
+        self.window().resize(self.window_normal_size)
+
+    def _move_via_gesture(self):
         if self._shadow.isVisible():
-            if not self._is_gestured:
-                self.window_normal_size = self.window().size()
-            self._shadow.hide()
-            self._is_gestured = True
-            self.window().setGeometry(self._shadow.geometry())
-        else:
-            if self._is_gestured:
-                self.window().resize(self.window_normal_size)
-            self._parser.parse_event(a0)
-            pos1 = self._parser.point
-            pos0 = self._press_pos
-            dx = pos1.x() - pos0.x()
-            dy = pos1.y() - pos0.y()
-            opos = self.window().pos()
-            self.window().move(dx + opos.x(), dy + opos.y())
+            self._use_shadow_geometry()
+            return
+        self._move_normal()
+        if self._is_gestured:
+            self._restore_normal_size()
             self._is_gestured = False
 
     def mouseReleaseEvent(self, a0: QtGui.QMouseEvent) -> None:
+        self._realese_event = EventParser(self.window(), a0)
         self.window().setCursor(QtCore.Qt.CursorShape.ArrowCursor)
         if self._is_pressed:
-            self._move_via_gesture(a0)
+            self._move_via_gesture()
         self._is_pressed = False
-        self._start_pos = None
         return super().mouseReleaseEvent(a0)
 
 
