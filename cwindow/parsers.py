@@ -1,4 +1,78 @@
+from dataclasses import dataclass
+
 from PyQt6 import QtCore, QtWidgets, QtGui
+
+
+@dataclass
+class ScreenAreas():
+    entire: QtCore.QRect
+    top: QtCore.QRect
+    right: QtCore.QRect
+    bottom: QtCore.QRect
+    left: QtCore.QRect
+    topright: QtCore.QRect
+    topleft: QtCore.QRect
+    bottomright: QtCore.QRect
+    bottomleft: QtCore.QRect
+
+
+class ScreenParser(QtWidgets.QWidget):
+
+    """
+    Parsers QScreen:
+    areas - QRect objects marks screen parts;
+    """
+
+    _screen: QtGui.QScreen
+
+    areas: ScreenAreas
+
+    def __init__(self, screen: QtGui.QScreen):
+        QtWidgets.QWidget.__init__(self)
+        self._screen = screen
+        self._parse_screen()
+
+    def _parse_screen(self):
+        def geo(): return self._screen.geometry()
+        x2 = w2 = int(geo().width()/2)
+        y2 = h2 = int(geo().height()/2)
+
+        self.areas = ScreenAreas(
+            geo(),
+            geo(),
+            geo(),
+            geo(),
+            geo(),
+            geo(),
+            geo(),
+            geo(),
+            geo())
+
+        self.areas.left.setWidth(w2)
+
+        self.areas.right.setX(x2)
+        self.areas.right.setWidth(w2)
+
+        self.areas.bottom.setY(y2)
+        self.areas.bottom.setHeight(h2)
+
+        self.areas.top.setHeight(h2)
+
+        self.areas.topright.setX(x2)
+        self.areas.topright.setWidth(w2)
+        self.areas.topright.setHeight(h2)
+
+        self.areas.topleft.setWidth(w2)
+        self.areas.topleft.setHeight(h2)
+
+        self.areas.bottomright.setX(x2)
+        self.areas.bottomright.setY(y2)
+        self.areas.bottomright.setHeight(h2)
+        self.areas.bottomright.setWidth(w2)
+
+        self.areas.bottomleft.setY(y2)
+        self.areas.bottomleft.setWidth(w2)
+        self.areas.bottomleft.setHeight(h2)
 
 
 class EventParser(QtWidgets.QWidget):
@@ -23,9 +97,10 @@ class EventParser(QtWidgets.QWidget):
     side: QtCore.Qt.Edge | QtCore.Qt.Corner = None
     shadow_rect: QtCore.QRect
 
-    def __init__(self, window: QtWidgets.QMainWindow, event: QtGui.QMouseEvent):
+    def __init__(self, titlebar: QtWidgets.QFrame, event: QtGui.QMouseEvent):
         QtWidgets.QWidget.__init__(self)
-        self._window = window
+        self._window = titlebar.window()
+        self._screen: ScreenParser = titlebar._screen
         self.event = event
         self.parse_event()
 
@@ -87,38 +162,22 @@ class EventParser(QtWidgets.QWidget):
             self.side = QtCore.Qt.Edge.BottomEdge
 
     def _get_shadow_rect(self):
-
-        geo = self.screen().geometry()
-        x2 = w2 = int(geo.width()/2)
-        y2 = h2 = int(geo.height()/2)
-
         if self.side == QtCore.Qt.Edge.BottomEdge:
             self.shadow_rect = None
-            return
-
-        if self.side == QtCore.Qt.Edge.LeftEdge:
-            geo.setWidth(w2)
-        if self.side == QtCore.Qt.Edge.RightEdge:
-            geo.setX(x2)
-            geo.setWidth(w2)
-        if self.side == QtCore.Qt.Corner.TopLeftCorner:
-            geo.setWidth(w2)
-            geo.setHeight(h2)
-        if self.side == QtCore.Qt.Corner.TopRightCorner:
-            geo.setX(x2)
-            geo.setWidth(w2)
-            geo.setHeight(h2)
-        if self.side == QtCore.Qt.Corner.BottomLeftCorner:
-            geo.setY(y2)
-            geo.setWidth(w2)
-            geo.setHeight(h2)
-        if self.side == QtCore.Qt.Corner.BottomRightCorner:
-            geo.setX(x2)
-            geo.setY(y2)
-            geo.setWidth(w2)
-            geo.setHeight(h2)
-
-        self.shadow_rect = geo
+        elif self.side == QtCore.Qt.Edge.LeftEdge:
+            self.shadow_rect = self._screen.areas.left
+        elif self.side == QtCore.Qt.Edge.RightEdge:
+            self.shadow_rect = self._screen.areas.right
+        elif self.side == QtCore.Qt.Corner.TopLeftCorner:
+            self.shadow_rect = self._screen.areas.topleft
+        elif self.side == QtCore.Qt.Corner.TopRightCorner:
+            self.shadow_rect = self._screen.areas.topright
+        elif self.side == QtCore.Qt.Corner.BottomLeftCorner:
+            self.shadow_rect = self._screen.areas.bottomleft
+        elif self.side == QtCore.Qt.Corner.BottomRightCorner:
+            self.shadow_rect = self._screen.areas.bottomright
+        else:
+            self.shadow_rect = self._screen.areas.entire
 
     def _get_event_relative_pos(self):
         dpos = self.event.pos()

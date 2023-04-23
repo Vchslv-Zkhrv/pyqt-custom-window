@@ -2,7 +2,7 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 
 from .grips import SideGrip
 from .shadow import WindowShadow
-from .parsers import EventParser
+from .parsers import EventParser, ScreenParser
 
 
 class TitleBar(QtWidgets.QFrame):
@@ -29,18 +29,17 @@ class TitleBar(QtWidgets.QFrame):
         self._shadow = WindowShadow()
         self.window_normal_size = parent.size()
 
-        self._press_event: EventParser
-        self._release_event: EventParser
+        self._screen = ScreenParser(self.screen())
 
     def mousePressEvent(self, a0: QtGui.QMouseEvent) -> None:
         self._is_pressed = True
-        self._press_event = EventParser(self.window(), a0)
+        self._press_event = EventParser(self, a0)
         self.window().setCursor(QtCore.Qt.CursorShape.ClosedHandCursor)
         return super().mousePressEvent(a0)
 
     def mouseMoveEvent(self, a0: QtGui.QMouseEvent) -> None:
         if self._is_pressed:
-            parser = EventParser(self.window(), a0)
+            parser = EventParser(self, a0)
             if parser.side and parser.shadow_rect:
                 self._shadow.show_(parser.shadow_rect)
             else:
@@ -91,7 +90,7 @@ class TitleBar(QtWidgets.QFrame):
             self._is_gestured = False
 
     def mouseReleaseEvent(self, a0: QtGui.QMouseEvent) -> None:
-        self._release_event = EventParser(self.window(), a0)
+        self._release_event = EventParser(self, a0)
         self.window().setCursor(QtCore.Qt.CursorShape.ArrowCursor)
         if self._is_pressed:
             self._move_via_gesture()
@@ -107,6 +106,7 @@ class Window(QtWidgets.QMainWindow):
 
     _grip_size = 12
     _titlebar_height = 44
+    title_bar: TitleBar
 
     def __init__(self):
         QtWidgets.QMainWindow.__init__(self)
