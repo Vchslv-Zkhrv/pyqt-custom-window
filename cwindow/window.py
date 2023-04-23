@@ -188,17 +188,22 @@ class TitleBar(QtWidgets.QFrame):
         self.window().move(dx + posW.x(), dy + posW.y())
 
     def _fix_x_delta_after_resize(self):
-        self._release_event.parse_event()
-        rdx = abs(self._press_event.relative_pos[0] - self._release_event.relative_pos[0])
-        dx = int(self.window().width()*rdx)
         pos = self.window().pos()
-        pos.setX(pos.x() + dx)
+        if self._release_event.point.x() > self._press_event.point.x():
+            x = self._press_event.event.pos().x()
+            x -= int(self.window().width() * self._press_event.relative_pos[0])
+            pos.setX(x)
+        else:
+            self._release_event.parse_event()
+            rdx = abs(self._press_event.relative_pos[0] - self._release_event.relative_pos[0])
+            dx = int(self.window().width()*rdx)
+            pos.setX(pos.x() + dx)
         self.window().move(pos)
 
     def _restore_normal_size(self):
         width = self.window().width()
         self.window().resize(self.window_normal_size)
-        if width> self.window_normal_size.width():
+        if width > self.window_normal_size.width():
             self._fix_x_delta_after_resize()
 
     def _move_via_gesture(self):
