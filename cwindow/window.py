@@ -196,8 +196,9 @@ class TitleBar(QtWidgets.QFrame):
         self.window().move(pos)
 
     def _restore_normal_size(self):
+        width = self.window().width()
         self.window().resize(self.window_normal_size)
-        if self.window().width() <= self.window_normal_size.width():
+        if width > self.window_normal_size.width():
             self._fix_x_delta_after_resize()
 
     def _move_via_gesture(self):
