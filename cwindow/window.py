@@ -7,7 +7,11 @@ from .shadow import WindowShadow
 class EventParser(QtWidgets.QWidget):
 
     """
-    Parses QMouseEvent
+    Parses QMouseEvent:
+    point - absolute event position;
+    relative_pos - event position relative to window width and height;
+    side - indicates that event happend near the screen edge or corner;
+    shadow_rect - geometry for WindowShadow.show_ method.
     """
 
     event: QtGui.QMouseEvent
@@ -151,7 +155,7 @@ class TitleBar(QtWidgets.QFrame):
         self.window_normal_size = parent.size()
 
         self._press_event: EventParser
-        self._realese_event: EventParser
+        self._release_event: EventParser
 
     def mousePressEvent(self, a0: QtGui.QMouseEvent) -> None:
         self._is_pressed = True
@@ -176,15 +180,25 @@ class TitleBar(QtWidgets.QFrame):
         self.window().setGeometry(self._shadow.geometry())
 
     def _move_normal(self):
-        pos1 = self._realese_event.point
+        pos1 = self._release_event.point
         pos0 = self._press_event.point
         posW = self.window().pos()
         dx = pos1.x() - pos0.x()
         dy = pos1.y() - pos0.y()
         self.window().move(dx + posW.x(), dy + posW.y())
 
+    def _fix_x_delta_after_resize(self):
+        self._release_event.parse_event()
+        rdx = self._press_event.relative_pos[0] - self._release_event.relative_pos[0]
+        dx = int(self.window().width()*rdx)
+        pos = self.window().pos()
+        pos.setX(pos.x() - dx)
+        self.window().move(pos)
+
     def _restore_normal_size(self):
         self.window().resize(self.window_normal_size)
+        if self.window().width() <= self.window_normal_size.width():
+            self._fix_x_delta_after_resize()
 
     def _move_via_gesture(self):
         if self._shadow.isVisible():
@@ -196,7 +210,7 @@ class TitleBar(QtWidgets.QFrame):
             self._is_gestured = False
 
     def mouseReleaseEvent(self, a0: QtGui.QMouseEvent) -> None:
-        self._realese_event = EventParser(self.window(), a0)
+        self._release_event = EventParser(self.window(), a0)
         self.window().setCursor(QtCore.Qt.CursorShape.ArrowCursor)
         if self._is_pressed:
             self._move_via_gesture()
