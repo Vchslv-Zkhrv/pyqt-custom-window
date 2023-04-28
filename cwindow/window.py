@@ -138,7 +138,7 @@ class TitleBar(QtWidgets.QFrame):
         return super().mouseReleaseEvent(a0)
 
 
-class Window(QtWidgets.QMainWindow):
+class CWindow(QtWidgets.QMainWindow):
 
     """
     Framless window with customazible title bar.

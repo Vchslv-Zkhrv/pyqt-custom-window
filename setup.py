@@ -11,7 +11,7 @@ class Application(QtWidgets.QApplication):
 
     def __init__(self):
         QtWidgets.QApplication.__init__(self, sys.argv)
-        self.window = cwindow.Window()
+        self.window = cwindow.CWindow()
         self.window.setMinimumSize(480, 360)
         self.window.show()
         sys.exit(self.exec())
