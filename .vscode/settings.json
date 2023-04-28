@@ -1,4 +1,0 @@
-{
-    "python.linting.flake8CategorySeverity.F": "Hint",
-    "python.linting.flake8CategorySeverity.W": "Hint"
-}
