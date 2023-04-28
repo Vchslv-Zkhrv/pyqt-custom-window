@@ -3,6 +3,8 @@ from PyQt6 import QtWidgets, QtCore
 
 class SideGrip(QtWidgets.QWidget):
 
+    """Grips that allows to resize frameless window"""
+
     def __init__(
             self,
             parent: QtWidgets.QMainWindow,

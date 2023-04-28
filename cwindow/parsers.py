@@ -82,7 +82,7 @@ class EventParser(QtWidgets.QWidget):
     point - absolute event position;
     relative_pos - event position relative to window width and height;
     side - indicates that event happend near the screen edge or corner;
-    shadow_rect - geometry for WindowShadow.show_ method.
+    shadow_rect - geometry for WindowShadow.show_ method;
     """
 
     event: QtGui.QMouseEvent
