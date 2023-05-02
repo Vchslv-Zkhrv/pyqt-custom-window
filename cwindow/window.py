@@ -16,7 +16,7 @@ class CWindow(QtWidgets.QMainWindow):
 
     #  visible part:
     # ┌─────────────────────────┬╌╌╌╌╌
-    # │        title_bar        │    | = titlebar_height (default 44px) 
+    # │        title_bar        │    | = titlebar_height (default 44px)
     # ├─────────────────────────┼╌╌╌╌╌
     # │                         │
     # │                         │
@@ -28,7 +28,7 @@ class CWindow(QtWidgets.QMainWindow):
 
     #  corner and side grips:
     # ┌─┬─────────┬─┬─────────┬─┬╌╌╌╌╌
-    # ├─┘         └─┘         └─┼╌╌╌╌╌ = grip_sze (defaul 12px)  
+    # ├─┘         └─┘         └─┼╌╌╌╌╌ = grip_sze (defaul 12px)
     # │                         │
     # │                         │
     # ├─┐                     ┌─┤
@@ -89,7 +89,7 @@ class CWindow(QtWidgets.QMainWindow):
             SideGrip(self, QtCore.Qt.Edge.RightEdge),
             SideGrip(self, QtCore.Qt.Edge.BottomEdge),
         ]
-        self.corner_grips = [QtWidgets.QSizeGrip(self) for i in range(4)]
+        self.corner_grips = [QtWidgets.QSizeGrip(self) for _ in range(4)]
         for grip in self.corner_grips:
             grip.setStyleSheet("background-color: rgba(0,0,0,0)")
 
@@ -180,7 +180,8 @@ class CWindow(QtWidgets.QMainWindow):
             self._normal_size = self.window().size()
         self._shadow.hide()
         self._is_gestured = True
-        self.setGeometry(self._shadow.geometry())
+        geo = self._shadow.geometry()
+        self.setGeometry(geo)
 
     def _move_normal(self):
 
@@ -254,13 +255,74 @@ class CWindow(QtWidgets.QMainWindow):
         self._press_event = EventParser(self, a0)
         self.setCursor(QtCore.Qt.CursorShape.ClosedHandCursor)
 
+    def _is_fullscreen_gesture(self, event: EventParser) -> bool:
+        portrait: bool = self.screen().isPortrait(self.screen().orientation())
+        return (
+            self.gesture_orientation_mode != modes.ScreenOrientationModes.use_special
+            and event.side == QtCore.Qt.Edge.TopEdge
+        ) or (
+            self.gesture_orientation_mode == modes.ScreenOrientationModes.use_special
+            and (
+                not portrait and event.side == QtCore.Qt.Edge.TopEdge or
+                portrait and event.side in (
+                    QtCore.Qt.Edge.LeftEdge,
+                    QtCore.Qt.Edge.RightEdge
+                )
+            )
+        )
+
+    def _skip_shadow(self, event: EventParser) -> bool:
+
+        portrait: bool = self.screen().isPortrait(self.screen().orientation())
+        fullscreen = self._is_fullscreen_gesture(event)
+
+        return (
+            # if function is disallowed
+            self.gesture_mode == modes.GestureResizeModes.never
+        ) or (
+            # if window can use shadow only for acceptable areas
+            self.gesture_mode == modes.GestureResizeModes.acceptable and
+            (
+                # looking for acceptable sides
+                event.shadow_rect.height() < self.minimumHeight() or
+                event.shadow_rect.width() < self.minimumWidth())
+        ) or (
+            # if corners are blocked
+            self.gesture_sides == modes.SideUsingModes.ignore_corners and
+            isinstance(event.side, QtCore.Qt.Corner)
+        ) or (
+            # if "ignore_portrait", only fullscreen gesture is allowed
+            self.gesture_orientation_mode == modes.ScreenOrientationModes.ignore_portrait and
+            portrait and
+            not fullscreen
+        ) or (
+            # if "use_special" dissalowed
+            self.gesture_orientation_mode != modes.ScreenOrientationModes.use_special and
+            event.side == QtCore.Qt.Edge.BottomEdge
+        ) or (
+            # if "use_special" used
+            self.gesture_orientation_mode == modes.ScreenOrientationModes.use_special and
+            not portrait and
+            event.side == QtCore.Qt.Edge.BottomEdge
+
+        ) or (
+            # if "fullscreen_only"
+            self.gesture_sides == modes.SideUsingModes.fullscreen_only and
+            not fullscreen
+        )
+
+    def _show_shadow(self, event: EventParser):
+        if self._skip_shadow(event):
+            return
+        self._shadow.show_(event.shadow_rect)
+
     def _titlebar_mouse_moved(self, a0: QtGui.QMouseEvent) -> None:
         if self._is_pressed:
-            # if pressed, checks that user moved window to the screen edge 
+            # if pressed, checks that user moved window to the screen edge
             # and shows the shadow to indicate target window geometry
             parser = EventParser(self, a0)
             if parser.side and parser.shadow_rect:
-                self._shadow.show_(parser.shadow_rect)
+                self._show_shadow(parser)
             else:
                 self._shadow.hide()
 

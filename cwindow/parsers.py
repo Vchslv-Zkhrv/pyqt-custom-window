@@ -163,7 +163,7 @@ class EventParser(QtWidgets.QWidget):
 
     def _get_shadow_rect(self):
         if self.side == QtCore.Qt.Edge.BottomEdge:
-            self.shadow_rect = None
+            self.shadow_rect = self._screen.areas.bottom
         elif self.side == QtCore.Qt.Edge.LeftEdge:
             self.shadow_rect = self._screen.areas.left
         elif self.side == QtCore.Qt.Edge.RightEdge:

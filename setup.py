@@ -12,6 +12,7 @@ class Application(QtWidgets.QApplication):
     def __init__(self):
         QtWidgets.QApplication.__init__(self, sys.argv)
         self.window = cwindow.CWindow()
+        self.window.gesture_orientation_mode = cwindow.modes.ScreenOrientationModes.no_difference
         self.window.setMinimumSize(480, 360)
         self.window.show()
         sys.exit(self.exec())
