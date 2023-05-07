@@ -8,8 +8,6 @@ from cwindow import modes
 
 class Application(QtWidgets.QApplication):
 
-    """main application class / главный класс приложения"""
-
     def __init__(self):
         QtWidgets.QApplication.__init__(self, sys.argv)
         self.window = cwindow.CWindow()

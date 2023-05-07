@@ -154,9 +154,7 @@ class CWindow(QtWidgets.QMainWindow):
             self.grip_size)
 
     def _update_cw_geometry(self):
-        rect = self.geometry()
-        rect.setX(0)
-        rect.setY(0)
+        rect = QtCore.QRect(0, 0, self.width(), self.height())
         self.centralWidget().setGeometry(rect)
 
     def resizeEvent(self, event):

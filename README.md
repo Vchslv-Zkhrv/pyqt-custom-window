@@ -6,13 +6,15 @@ It's still removable, resizable and supports some Windows gestures. You can plac
 
 ## Installation
 
-Clone or fork this repository
+Clone or fork this repository.
 
 ## Usage
 
-You can see usage example in setup.py
+You can see usage example in setup.py.
 
 ### Setup
+
+Exactly the same as with a regular window.
 
 ```python
 import sys
@@ -21,6 +23,8 @@ from cwindow import CWindow
 
 app = QtWidgtets.QApplication(sys.argv)
 window = CWindow()
+
+window.setMinimumSize(720, 480)
 
 window.show()
 sys.exit(app.exec())
