@@ -82,7 +82,7 @@ class EventParser(QtWidgets.QWidget):
     point - absolute event position;
     relative_pos - event position relative to window width and height;
     side - indicates that event happend near the screen edge or corner;
-    shadow_rect - geometry for WindowShadow.show_ method;
+    screen_area - geometry for WindowShadow.show_ method;
     """
 
     event: QtGui.QMouseEvent
@@ -95,7 +95,7 @@ class EventParser(QtWidgets.QWidget):
     point: QtCore.QPoint
     relative_pos: tuple[float, float]
     side: QtCore.Qt.Edge | QtCore.Qt.Corner = None
-    shadow_rect: QtCore.QRect
+    screen_area: QtCore.QRect
 
     def __init__(self, titlebar: QtWidgets.QFrame, event: QtGui.QMouseEvent):
         QtWidgets.QWidget.__init__(self)
@@ -119,7 +119,7 @@ class EventParser(QtWidgets.QWidget):
         self._get_event_relative_pos()
         self._get_event_edges()
         self._translate_edges_to_qt()
-        self._get_shadow_rect()
+        self._get_screen_area()
 
     def _get_event_absolute_pos(self):
         pos = self.event.pos()
@@ -161,23 +161,23 @@ class EventParser(QtWidgets.QWidget):
         elif self.bottom:
             self.side = QtCore.Qt.Edge.BottomEdge
 
-    def _get_shadow_rect(self):
+    def _get_screen_area(self):
         if self.side == QtCore.Qt.Edge.BottomEdge:
-            self.shadow_rect = self._screen.areas.bottom
+            self.screen_area = self._screen.areas.bottom
         elif self.side == QtCore.Qt.Edge.LeftEdge:
-            self.shadow_rect = self._screen.areas.left
+            self.screen_area = self._screen.areas.left
         elif self.side == QtCore.Qt.Edge.RightEdge:
-            self.shadow_rect = self._screen.areas.right
+            self.screen_area = self._screen.areas.right
         elif self.side == QtCore.Qt.Corner.TopLeftCorner:
-            self.shadow_rect = self._screen.areas.topleft
+            self.screen_area = self._screen.areas.topleft
         elif self.side == QtCore.Qt.Corner.TopRightCorner:
-            self.shadow_rect = self._screen.areas.topright
+            self.screen_area = self._screen.areas.topright
         elif self.side == QtCore.Qt.Corner.BottomLeftCorner:
-            self.shadow_rect = self._screen.areas.bottomleft
+            self.screen_area = self._screen.areas.bottomleft
         elif self.side == QtCore.Qt.Corner.BottomRightCorner:
-            self.shadow_rect = self._screen.areas.bottomright
+            self.screen_area = self._screen.areas.bottomright
         else:
-            self.shadow_rect = self._screen.areas.entire
+            self.screen_area = self._screen.areas.entire
 
     def _get_event_relative_pos(self):
         dpos = self.event.pos()

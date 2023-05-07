@@ -3,6 +3,7 @@ import sys
 from PyQt6 import QtWidgets
 
 import cwindow
+from cwindow import modes
 
 
 class Application(QtWidgets.QApplication):
@@ -12,8 +13,8 @@ class Application(QtWidgets.QApplication):
     def __init__(self):
         QtWidgets.QApplication.__init__(self, sys.argv)
         self.window = cwindow.CWindow()
-        self.window.gesture_orientation_mode = cwindow.modes.ScreenOrientationModes.no_difference
-        self.window.setMinimumSize(480, 360)
+        self.window.gesture_mode = modes.GestureResizeModes.shrink_as_possible
+        self.window.setMinimumSize(1080, 480)
         self.window.show()
         sys.exit(self.exec())
 

@@ -284,8 +284,8 @@ class CWindow(QtWidgets.QMainWindow):
             self.gesture_mode == modes.GestureResizeModes.acceptable and
             (
                 # looking for acceptable sides
-                event.shadow_rect.height() < self.minimumHeight() or
-                event.shadow_rect.width() < self.minimumWidth())
+                event.screen_area.height() < self.minimumHeight() or
+                event.screen_area.width() < self.minimumWidth())
         ) or (
             # if corners are blocked
             self.gesture_sides == modes.SideUsingModes.ignore_corners and
@@ -311,17 +311,57 @@ class CWindow(QtWidgets.QMainWindow):
             not fullscreen
         )
 
+    def _get_appropriate_area(self, event: EventParser) -> QtCore.QRect:
+        """
+        implements "shrink_as_possibple" option
+        """
+        # input
+        area = event.screen_area
+        ah, aw, ax, ay = area.height(), area.width(), area.x(), area.y()
+        mh, mw = self.minimumHeight(), self.minimumWidth()
+        dx, dy = 0, 0
+        # if event screen area violates minimimum height
+        if ah < mh:
+            area.setHeight(mh)
+            if ay > 1:
+                dy = mh - ah
+        # if event screen area violates minimimum width
+        if aw < mw:
+            area.setWidth(mw)
+            if ax > 1:
+                dx = mw - aw
+        # move backwards if area is off screen
+        if event.right:
+            dx = -dx
+        if event.bottom:
+            dy = -dy
+        # set new position
+        area.setX(ax + dx)
+        area.setY(ay + dy)
+        # output
+        return area
+
     def _show_shadow(self, event: EventParser):
+        """
+        shows window shadow using user settings
+        """
+        # skip (or not to skip) the shadow
         if self._skip_shadow(event):
             return
-        self._shadow.show_(event.shadow_rect)
+        # resize the shadow
+        if self.gesture_mode == modes.GestureResizeModes.shrink_as_possible:
+            area = self._get_appropriate_area(event)
+        else:
+            area = event.screen_area
+        # draw the shadow
+        self._shadow.show_(area)
 
     def _titlebar_mouse_moved(self, a0: QtGui.QMouseEvent) -> None:
         if self._is_pressed:
             # if pressed, checks that user moved window to the screen edge
             # and shows the shadow to indicate target window geometry
             parser = EventParser(self, a0)
-            if parser.side and parser.shadow_rect:
+            if parser.side and parser.screen_area:
                 self._show_shadow(parser)
             else:
                 self._shadow.hide()
