@@ -1,4 +1,4 @@
-from PyQt6 import QtWidgets, QtCore
+from PyQt6 import QtWidgets, QtCore, QtGui
 
 
 class SideGrip(QtWidgets.QWidget):
@@ -27,38 +27,38 @@ class SideGrip(QtWidgets.QWidget):
 
         self.mouse_pos = None
 
-    def resize_left(self, delta):
+    def resize_left(self, delta: QtCore.QPoint):
         window = self.window()
         width = max(window.minimumWidth(), window.width() - delta.x())
         geo = window.geometry()
         geo.setLeft(geo.right() - width)
         window.setGeometry(geo)
 
-    def resize_top(self, delta):
+    def resize_top(self, delta: QtCore.QPoint):
         window = self.window()
         height = max(window.minimumHeight(), window.height() - delta.y())
         geo = window.geometry()
         geo.setTop(geo.bottom() - height)
         window.setGeometry(geo)
 
-    def resize_right(self, delta):
+    def resize_right(self, delta: QtCore.QPoint):
         window = self.window()
         width = max(window.minimumWidth(), window.width() + delta.x())
         window.resize(width, window.height())
 
-    def resize_bottom(self, delta):
+    def resize_bottom(self, delta: QtCore.QPoint):
         window = self.window()
         height = max(window.minimumHeight(), window.height() + delta.y())
         window.resize(window.width(), height)
 
-    def mousePressEvent(self, event):
+    def mousePressEvent(self, event: QtGui.QMouseEvent):
         if event.button() == QtCore.Qt.MouseButton.LeftButton:
             self.mouse_pos = event.pos()
 
-    def mouseMoveEvent(self, event):
+    def mouseMoveEvent(self, event: QtGui.QMouseEvent):
         if self.mouse_pos is not None:
             delta = event.pos() - self.mouse_pos
             self.resize_func(delta)
 
-    def mouseReleaseEvent(self, event):
+    def mouseReleaseEvent(self, event: QtGui.QMouseEvent):
         self.mouse_pos = None
