@@ -44,6 +44,7 @@ class CWindow(QtWidgets.QMainWindow):
 
     title_bar: QtWidgets.QFrame
     content: QtWidgets.QFrame
+    shadow: WindowShadow
 
     gesture_mode: modes.GestureResizeMode = modes.GestureResizeModes.shrink_as_possible
     gesture_sides: modes.SidesUsingMode = modes.SideUsingModes.whole
@@ -71,7 +72,7 @@ class CWindow(QtWidgets.QMainWindow):
         self._is_pressed = False
         # _is_gestured indicates that window was resized with moving to screen edge gesture
         self._is_gestured = False
-        self._shadow = WindowShadow(self.shadow_color)
+        self.shadow = WindowShadow(self.shadow_color)
         self._normal_size = self.size()
         self._screen = ScreenParser(self.screen())
 
@@ -178,9 +179,9 @@ class CWindow(QtWidgets.QMainWindow):
         if not self._is_gestured:
             # saves window old size to restore it later
             self._normal_size = self.window().size()
-        self._shadow.hide()
+        self.shadow.hide()
         self._is_gestured = True
-        geo = self._shadow.geometry()
+        geo = self.shadow.geometry()
         self.setGeometry(geo)
 
     def _move_normal(self):
@@ -240,7 +241,7 @@ class CWindow(QtWidgets.QMainWindow):
         """
 
         # if user wants to resize window with screen edge gesture
-        if self._shadow.isVisible():
+        if self.shadow.isVisible():
             self._use_shadow_geometry()
             return
 
@@ -354,7 +355,7 @@ class CWindow(QtWidgets.QMainWindow):
         else:
             area = event.screen_area
         # draw the shadow
-        self._shadow.show_(area)
+        self.shadow.show_(area)
 
     def _titlebar_mouse_moved(self, a0: QtGui.QMouseEvent) -> None:
         if self._is_pressed:
@@ -364,7 +365,7 @@ class CWindow(QtWidgets.QMainWindow):
             if parser.side and parser.screen_area:
                 self._show_shadow(parser)
             else:
-                self._shadow.hide()
+                self.shadow.hide()
 
     def _titlebar_mouse_released(self, a0: QtGui.QMouseEvent) -> None:
         # saves event info
